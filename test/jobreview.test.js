@@ -1,19 +1,35 @@
 const JobReview = artifacts.require("JobReview");
+const JOBcoin = artifacts.require("JOBcoin");
 const truffleAssert = require("truffle-assertions");
 
-contract("JobReview", (accounts) => {
+contract("Jobchain - Job Reviews", (accounts) => {
     let reviewContract; // Declare a variable to hold the contract instance
 
     // Before each test, deploy a new instance of the contract
     beforeEach(async () => {
-        reviewContract = await JobReview.new();
+        jobcoin = await JOBcoin.new("JOBcoin", "JOB", 1000000);
+        const tokenInstance = await JOBcoin.deployed();
+
+        // Transfer JOBcoins to test users
+        const initialBalance = web3.utils.toWei("10", "ether"); // Set initial balance to 100 JOBcoins
+        const testUser1 = accounts[1];
+        const testUser2 = accounts[2];
+
+        await tokenInstance.transfer(testUser1, initialBalance, { from: accounts[0] });
+        await tokenInstance.transfer(testUser2, initialBalance, { from: accounts[0] });
+
+
+        await tokenInstance.approve(testUser1, initialBalance, { from: accounts[0] });
+        await tokenInstance.approve(testUser2, initialBalance, { from: accounts[0] });
+
+        reviewContract = await JobReview.new(tokenInstance.address);
     });
 
     it("test retrieve review text by review hash", async () => {
         // Create a new review
         const reviewHash = "0x1234abcd";
         const reviewText = "This is a review.";
-        await reviewContract.submitReview("Company XYZ", "Job Title", reviewHash, reviewText, 5, { from: accounts[0] });
+        await reviewContract.submitReview("Company XYZ", "Job Title", reviewHash, reviewText, 1000, 5, { from: accounts[0] });
 
         // Retrieve review text by review hash
         const retrievedReviewText = await reviewContract.getReviewText(reviewHash);
@@ -26,10 +42,11 @@ contract("JobReview", (accounts) => {
         const companyName = "Company A";
         const jobTitle = "Job Title A";
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
+        const salary = 1000;
         const rating = 4;
 
         // Submit a review
-        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, rating);
+        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, salary, rating);
 
         // Get the review count
         const reviewCount = await reviewContract.getReviewsCount();
@@ -59,36 +76,36 @@ contract("JobReview", (accounts) => {
     it("should not submit a review with invalid inputs", async () => {
         // Test submitting with empty strings
         try {
-            await reviewContract.submitReview("", "Job Title B", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 3);
+            await reviewContract.submitReview("", "Job Title B", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 3);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Company name must not be empty", "Error message does not match");
         }
-    
+
         try {
-            await reviewContract.submitReview("Company C", "", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 5);
+            await reviewContract.submitReview("Company C", "", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 5);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Job title must not be empty", "Error message does not match");
         }
-    
+
         try {
-            await reviewContract.submitReview("Company D", "Job Title D", "0x0000000000000000000000000000000000000000000000000000000000000000", { from: accounts[1] }, 2);
+            await reviewContract.submitReview("Company D", "Job Title D", "0x0000000000000000000000000000000000000000000000000000000000000000", { from: accounts[1] }, 1000, 2);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Hash must not be empty", "Error message does not match");
         }
-    
-    
+
+
         // Test submitting with invalid rating
         try {
-            await reviewContract.submitReview("Company F", "Job Title F", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 6);
+            await reviewContract.submitReview("Company F", "Job Title F", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 6);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Invalid rating", "Error message does not match");
         }
     });
-    
+
 
     // Test retrieving review text from hash
     it("should retrieve review text from hash", async () => {
@@ -97,9 +114,10 @@ contract("JobReview", (accounts) => {
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
         const rating = 4;
         const reviewText = "This is a sample review text";
+        const salary = 1000;
 
         // Submit a review
-        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, rating);
+        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, salary, rating);
 
         // Set review text for the submitted review
         await reviewContract.setReviewText(0, reviewText, { from: accounts[0] });
@@ -117,9 +135,10 @@ contract("JobReview", (accounts) => {
         const jobTitle = "Job Title H";
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
         const rating = 4;
+        const salary = 1000;
 
         // Submit a review
-        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, rating);
+        await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, salary, rating);
 
         // Get the review count
         let reviewCount = await reviewContract.getReviewsCount();
