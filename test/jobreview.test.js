@@ -1,5 +1,6 @@
 const JobReview = artifacts.require("JobReview");
 const JOBcoin = artifacts.require("JOBcoin");
+const JOBcoin = artifacts.require("JOBcoin");
 const truffleAssert = require("truffle-assertions");
 
 contract("Jobchain - Job Reviews", (accounts) => {
@@ -27,6 +28,7 @@ contract("Jobchain - Job Reviews", (accounts) => {
         const reviewHash = "0x1234abcd";
         const reviewText = "This is a review.";
         await reviewContract.submitReview("Company XYZ", "Job Title", reviewHash, reviewText, 1000, 5, { from: accounts[0] });
+        await reviewContract.submitReview("Company XYZ", "Job Title", reviewHash, reviewText, 1000, 5, { from: accounts[0] });
 
         const retrievedReviewText = await reviewContract.getReviewText(reviewHash);
         assert.equal(retrievedReviewText, reviewText, "Review text not retrieved correctly");
@@ -37,6 +39,7 @@ contract("Jobchain - Job Reviews", (accounts) => {
         const companyName = "Company A";
         const jobTitle = "Job Title A";
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
+        const salary = 1000;
         const salary = 1000;
         const rating = 4;
 
@@ -64,19 +67,24 @@ contract("Jobchain - Job Reviews", (accounts) => {
     it("should not submit a review with invalid inputs", async () => {
         try {
             await reviewContract.submitReview("", "Job Title B", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 3);
+            await reviewContract.submitReview("", "Job Title B", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 3);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Company name must not be empty", "Error message does not match");
         }
 
+
         try {
+            await reviewContract.submitReview("Company C", "", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 5);
             await reviewContract.submitReview("Company C", "", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 5);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Job title must not be empty", "Error message does not match");
         }
 
+
         try {
+            await reviewContract.submitReview("Company D", "Job Title D", "0x0000000000000000000000000000000000000000000000000000000000000000", { from: accounts[1] }, 1000, 2);
             await reviewContract.submitReview("Company D", "Job Title D", "0x0000000000000000000000000000000000000000000000000000000000000000", { from: accounts[1] }, 1000, 2);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
@@ -85,11 +93,13 @@ contract("Jobchain - Job Reviews", (accounts) => {
 
         try {
             await reviewContract.submitReview("Company F", "Job Title F", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 6);
+            await reviewContract.submitReview("Company F", "Job Title F", "0x1234567890123456789012345678901234567890123456789012345678901234", { from: accounts[1] }, 1000, 6);
             assert.fail("Expected to fail with 'Invalid inputs', but transaction succeeded");
         } catch (error) {
             assert.include(error.message, "Invalid rating", "Error message does not match");
         }
     });
+
 
 
     it("should retrieve review text from hash", async () => {
@@ -98,6 +108,7 @@ contract("Jobchain - Job Reviews", (accounts) => {
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
         const rating = 4;
         const reviewText = "This is a sample review text";
+        const salary = 1000;
         const salary = 1000;
 
         await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, salary, rating);
@@ -114,6 +125,7 @@ contract("Jobchain - Job Reviews", (accounts) => {
         const jobTitle = "Job Title H";
         const reviewHash = "0x1234567890123456789012345678901234567890123456789012345678901234";
         const rating = 4;
+        const salary = 1000;
         const salary = 1000;
 
         await reviewContract.submitReview(companyName, jobTitle, reviewHash, { from: accounts[0] }, salary, rating);

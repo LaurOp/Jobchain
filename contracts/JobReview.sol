@@ -1,8 +1,16 @@
 pragma solidity ^0.8.10;
 
 import "./JOBcoin.sol";
+pragma solidity ^0.8.10;
+
+import "./JOBcoin.sol";
 
 contract JobReview {
+    uint counterReviews;
+    uint counterListings;
+
+    JOBcoin private _jobCoin;
+
     uint counterReviews;
     uint counterListings;
 
@@ -11,16 +19,19 @@ contract JobReview {
     struct Review {
         uint id;
         uint jobId;
+        uint jobId;
         address reviewer;
         string companyName;
         string jobTitle;
         bytes32 reviewHash;
         string reviewText;
         uint salary;
+        uint salary;
         uint8 rating;
     }
 
     struct JobListing {
+        uint id;
         uint id;
         string companyName;
         string jobTitle;
@@ -54,6 +65,7 @@ contract JobReview {
 
     event ReviewUpdated(
         uint reviewId,
+        uint reviewId,
         address indexed reviewer,
         string companyName,
         string jobTitle,
@@ -63,7 +75,21 @@ contract JobReview {
         uint8 rating
     );
 
+    event ReviewUpdated(
+        uint reviewId,
+        address indexed reviewer,
+        string companyName,
+        string jobTitle,
+        bytes32 reviewHash,
+        string reviewText,
+        uint salary,
+        uint salary,
+        uint8 rating
+    );
+
+
     event ReviewDeleted(
+        uint reviewId,
         uint reviewId,
         address indexed reviewer,
         string companyName,
@@ -71,7 +97,12 @@ contract JobReview {
         bytes32 reviewHash,
         uint salary,
         uint8 rating
+        bytes32 reviewHash,
+        uint salary,
+        uint8 rating
     );
+
+    event LogMessage(string message);
 
     event LogMessage(string message);
 
@@ -85,6 +116,7 @@ contract JobReview {
 
     modifier onlyAuthorizedLister() {
         require(
+            authorizedListers[msg.sender] || msg.sender == owner,
             authorizedListers[msg.sender] || msg.sender == owner,
             "Only authorized listers can call this function"
         );
@@ -109,11 +141,18 @@ contract JobReview {
     function resetCounters() public {
         counterReviews = 0;
         counterListings = 0;
+        resetCounters();
+    }
+
+    function resetCounters() public {
+        counterReviews = 0;
+        counterListings = 0;
     }
 
     function createJobListing(
         string memory _companyName,
         string memory _jobTitle,
+        string memory _desc
         string memory _desc
     ) public onlyAuthorizedLister {
         require(
@@ -193,6 +232,7 @@ contract JobReview {
         bytes32 _reviewHash,
         string memory _reviewText,
         uint _salary,
+        uint _salary,
         uint8 _rating
     ) public {
         require(
@@ -204,7 +244,10 @@ contract JobReview {
         require(_reviewHash != bytes32(0), "Hash must not be empty");
         require(_rating >= 1 && _rating <= 5, "Invalid rating");
         uint myid = counterReviews++;
+        uint myid = counterReviews++;
         Review memory newReview = Review(
+            myid,
+            999999999,
             myid,
             999999999,
             msg.sender,
@@ -213,16 +256,19 @@ contract JobReview {
             _reviewHash,
             _reviewText,
             _salary,
+            _salary,
             _rating
         );
         reviews.push(newReview);
         emit ReviewSubmitted(
+            myid,
             myid,
             msg.sender,
             _companyName,
             _jobTitle,
             _reviewHash,
             _reviewText,
+            _salary,
             _salary,
             _rating
         );
@@ -250,7 +296,30 @@ contract JobReview {
             rating: _rating,
             salary: _salary
         });
+    function createReview(
+        uint _jobId,
+        bytes32 _reviewHash,
+        string memory _reviewText,
+        uint _salary,
+        uint8 _rating
+    ) public {
+        require(_jobId < jobListings.length, "JobListing does not exist");
 
+        JobListing memory job = jobListings[_jobId];
+        uint myid = counterReviews++;
+        Review memory newReview = Review({
+            id: myid,
+            jobId: _jobId,
+            reviewer: msg.sender,
+            companyName: job.companyName,
+            jobTitle: job.jobTitle,
+            reviewHash: _reviewHash,
+            reviewText: _reviewText,
+            rating: _rating,
+            salary: _salary
+        });
+
+        reviews.push(newReview);
         reviews.push(newReview);
 
         emit ReviewSubmitted(
@@ -272,12 +341,20 @@ contract JobReview {
         view
         returns (address, string memory, string memory, bytes32, uint, uint8)
     {
+    )
+        public
+        view
+        returns (address, string memory, string memory, bytes32, uint, uint8)
+    {
         require(_index < reviews.length, "Index out of range");
         Review memory review = reviews[_index];
         return (
             review.reviewer,
             review.companyName,
             review.jobTitle,
+            review.reviewHash,
+            review.salary,
+            review.rating
             review.reviewHash,
             review.salary,
             review.rating
@@ -341,6 +418,52 @@ contract JobReview {
         );
     }
 
+    function getReviewsCount() public view returns (uint256) {
+        return reviews.length;
+    }
+
+    function setReviewText(uint256 reviewId, string memory reviewText) public {
+        require(reviewId < reviews.length, "Review ID does not exist");
+        Review storage review = reviews[reviewId];
+        review.id = reviewId;
+        review.reviewText = reviewText;
+    }
+
+    function updateReview(
+        uint _reviewId,
+        bytes32 _reviewHash,
+        string memory _reviewText,
+        uint _salary,
+        uint8 _rating
+    ) public {
+        require(_reviewId < reviews.length, "Invalid review ID");
+
+        Review storage reviewToUpdate = reviews[_reviewId];
+
+        require(
+            msg.sender == reviewToUpdate.reviewer,
+            "Only reviewer can update review"
+        );
+        require(_reviewHash != bytes32(0), "Hash must not be empty");
+        require(_rating >= 1 && _rating <= 5, "Invalid rating");
+
+        reviewToUpdate.reviewHash = _reviewHash;
+        reviewToUpdate.reviewText = _reviewText;
+        reviewToUpdate.salary = _salary;
+        reviewToUpdate.rating = _rating;
+
+        emit ReviewUpdated(
+            reviewToUpdate.id,
+            reviewToUpdate.reviewer,
+            reviewToUpdate.companyName,
+            reviewToUpdate.jobTitle,
+            reviewToUpdate.reviewHash,
+            reviewToUpdate.reviewText,
+            reviewToUpdate.salary,
+            reviewToUpdate.rating
+        );
+    }
+
     function deleteReview(uint256 _index) public {
         require(_index < reviews.length, "Index out of range");
         Review memory reviewToDelete = reviews[_index];
@@ -354,9 +477,13 @@ contract JobReview {
         bytes32 reviewHash = reviewToDelete.reviewHash;
         emit ReviewDeleted(
             reviewToDelete.id,
+            reviewToDelete.id,
             msg.sender,
             reviewToDelete.companyName,
             reviewToDelete.jobTitle,
+            reviewHash,
+            reviewToDelete.salary,
+            reviewToDelete.rating
             reviewHash,
             reviewToDelete.salary,
             reviewToDelete.rating
@@ -369,9 +496,13 @@ contract JobReview {
                 delete reviews[i];
                 emit ReviewDeleted(
                     reviews[i].id,
+                    reviews[i].id,
                     _reviewer,
                     reviews[i].companyName,
                     reviews[i].jobTitle,
+                    reviews[i].reviewHash,
+                    reviews[i].salary,
+                    reviews[i].rating
                     reviews[i].reviewHash,
                     reviews[i].salary,
                     reviews[i].rating
@@ -394,8 +525,23 @@ contract JobReview {
 
     function isAuthorizedLister(address _lister) public view returns (bool) {
         return authorizedListers[_lister];
+    function addAuthorizedLister(address _lister) public onlyOwner {
+        authorizedListers[_lister] = true;
     }
 
+    function removeAuthorizedLister(address _lister) public onlyOwner {
+        delete authorizedListers[_lister];
+    }
+
+    function transferOwnership(address _newOwner) public onlyOwner {
+        owner = _newOwner;
+    }
+
+    function isAuthorizedLister(address _lister) public view returns (bool) {
+        return authorizedListers[_lister];
+    }
+
+    function getBytes32Length(bytes32 data) internal pure returns (uint256) {
     function getBytes32Length(bytes32 data) internal pure returns (uint256) {
         bytes memory bytesData = new bytes(32);
         assembly {
